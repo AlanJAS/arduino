@@ -29,7 +29,6 @@ from TurtleArt.tapalette import special_block_colors
 from TurtleArt.talogo import primitive_dictionary, logoerror
 
 sys.path.insert(0, os.path.abspath('./plugins/arduino'))
-import serial
 import firmata
 
 
