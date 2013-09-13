@@ -128,7 +128,7 @@ class Arduino(Plugin):
 
         primitive_dictionary['analogread'] = self._prim_analog_read
         palette.add_block('analogread',
-                  style='basic-style-1arg',
+                  style='number-style-1arg',
                   label=[_('analog read')],
                   default=[0],
                   help_string=_('Read value from analog port. Value may be between 0 and 1023. Use Vref \
@@ -151,7 +151,7 @@ to determine voltage. For USB, volt=((read)*5)/1024) approximately.'),
 
         primitive_dictionary['digitalread'] = self._prim_digital_read
         palette.add_block('digitalread',
-                  style='basic-style-1arg',
+                  style='number-style-1arg',
                   label=[_('digital read')],
                   default=[13],
                   help_string=_('Read value from digital port.'),
