@@ -109,6 +109,7 @@ class Arduino(Plugin):
         palette.add_block('pinmode',
                   style='basic-style-2arg',
                   label=[_('pin mode'),_('pin'),_('mode')],
+                  default=[1],
                   help_string=_('Select the pin function (INPUT, OUTPUT, PWM, SERVO).'),
                   prim_name='pinmode')
         self.tw.lc.def_prim('pinmode', 2,
@@ -142,7 +143,7 @@ to determine voltage. For USB, volt=((read)*5)/1024) approximately.'),
         palette.add_block('digitalwrite',
                   style='basic-style-2arg',
                   label=[_('digital write'),_('pin'),_('value')],
-                  default=[13],
+                  default=[13, 1],
                   help_string=_('Write digital value to specified port.'),
                   prim_name='digitalwrite')
         self.tw.lc.def_prim('digitalwrite', 2,
