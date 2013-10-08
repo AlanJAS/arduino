@@ -27,6 +27,7 @@ from TurtleArt.tapalette import palette_name_to_index
 from TurtleArt.tapalette import palette_blocks
 from TurtleArt.tapalette import special_block_colors
 from TurtleArt.talogo import primitive_dictionary, logoerror
+from TurtleArt.tautils import debug_output
 
 sys.path.insert(0, os.path.abspath('./plugins/arduino'))
 import firmata
@@ -59,7 +60,7 @@ class Arduino(Plugin):
         self._arduinos_dev = []
 
     def setup(self):
-
+        debug_output('creating %s palette' % _('arduino'), self.tw.running_sugar)
         palette = make_palette('arduino', COLOR_NOTPRESENT, _('Palette of Arduino blocks'))
 
         primitive_dictionary['arduinorefresh'] = self._prim_arduinorefresh
