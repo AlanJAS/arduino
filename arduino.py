@@ -216,6 +216,8 @@ to determine voltage. For USB, volt=((read)*5)/1024) approximately.'),
         self.tw.lc.def_prim('pwm', 0,
             lambda self: primitive_dictionary['pwm']())
 
+    ############################### Turtle signals ############################
+
     def start(self):
         pass
 
@@ -225,8 +227,7 @@ to determine voltage. For USB, volt=((read)*5)/1024) approximately.'),
     def stop(self):
         pass
 
-    def clear(self):
-        pass
+    ###########################################################################
 
     def _check_init(self):
         n = len(self._arduinos)
