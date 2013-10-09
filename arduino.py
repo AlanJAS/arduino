@@ -367,23 +367,23 @@ to determine voltage. For USB, volt=((read)*5)/1024) approximately.'),
             raise logoerror(_('Not found Arduino %s') % (i + 1))
 
     def change_color_blocks(self):
-        index = palette_name_to_index('arduino')
-        arduino_blocks = palette_blocks[index]
         if len(self._arduinos) > 0:
             arduino_present = True
         else:
             arduino_present = False
+        index = palette_name_to_index('arduino')
+        if index is not None:
+            arduino_blocks = palette_blocks[index]
+            for block in self.tw.block_list.list:
+                if block.type in ['proto', 'block']:
+                    if block.name in arduino_blocks:
+                        if (arduino_present) or (block.name == 'arduinorefresh'):
+                            special_block_colors[block.name] = COLOR_PRESENT[:]
+                        else:
+                            special_block_colors[block.name] = COLOR_NOTPRESENT[:]
+                        block.refresh()
 
-        for block in self.tw.block_list.list:
-            if block.type in ['proto', 'block']:
-                if block.name in arduino_blocks:
-                    if (arduino_present) or (block.name == 'arduinorefresh'):
-                        special_block_colors[block.name] = COLOR_PRESENT[:]
-                    else:
-                        special_block_colors[block.name] = COLOR_NOTPRESENT[:]
-                    block.refresh()
-
-        self.tw.show_toolbar_palette(index, regenerate=True, show=False)
+            self.tw.regenerate_palette(index)
 
     def _prim_arduinorefresh(self):
 
