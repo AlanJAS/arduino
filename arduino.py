@@ -283,13 +283,13 @@ to determine voltage. For USB, volt=((read)*5)/1024) approximately.'),
         except:
             logoerror(ERROR_VALUE_TYPE)
         if (value < 0) or (value > 1):
+            raise logoerror(ERROR_VALUE_D)
+        else:
             try:
                 a = self._arduinos[self.active_arduino]
                 a.digital_write(int(pin), value)
             except:
                 raise logoerror(ERROR)
-        else:
-            raise logoerror(ERROR_VALUE_D)
 
     def _prim_analog_read(self, pin):
         self._check_init()
