@@ -459,8 +459,7 @@ class Arduino(Plugin):
                     self._arduinos_it.append(pyfirmata.util.Iterator(board))
                     self._arduinos_it[len(self._arduinos)-1].start()
                 except:
-                    debug_output('Error al cargar la placa')
+                    debug_output(_('Error loading %s board') % n)
                     pass
-        
-        #debug_output('[%s]' % ', '.join(map(str, self._arduinos)))
+
         self.change_color_blocks()
