@@ -34,8 +34,7 @@ import pyfirmata
 
 VALUE = {_('HIGH'): 1, _('LOW'): 0}
 MODE = {_('INPUT'): pyfirmata.INPUT, _('OUTPUT'): pyfirmata.OUTPUT,
-        _('ANALOG'): pyfirmata.ANALOG, _('PWM'): pyfirmata.PWM,
-        _('SERVO'): pyfirmata.SERVO}
+        _('PWM'): pyfirmata.PWM, _('SERVO'): pyfirmata.SERVO}
 
 ERROR = _('ERROR: Check the Arduino and the number of port.')
 ERROR_VALUE_A = _('ERROR: Value must be a number from 0 to 1.')
@@ -54,9 +53,7 @@ class Arduino(Plugin):
 
     def __init__(self, parent):
         self.tw = parent
-
         self._baud = 57600
-
         self.active_arduino = 0
         self._arduinos = []
         self._arduinos_dev = []
@@ -234,7 +231,6 @@ class Arduino(Plugin):
         n = len(self._arduinos)
         if (self.active_arduino < n) and (self.active_arduino >= 0):
             a = self._arduinos[self.active_arduino]
-            #a.parse()
         else:
             raise logoerror(_('Not found Arduino %s') % (self.active_arduino + 1))
 
@@ -244,7 +240,6 @@ class Arduino(Plugin):
             pin = int(pin)
         except:
             raise logoerror(_('The pin must be an integer'))
-
         if (mode in MODE):
             try:
                 a = self._arduinos[self.active_arduino]
@@ -264,19 +259,19 @@ class Arduino(Plugin):
             tmp = int(value)
         except:
             raise logoerror(ERROR_VALUE_TYPE)
-
         try:
             a = self._arduinos[self.active_arduino]
             mode = a.digital[pin]._get_mode()
         except:
             raise logoerror(ERROR)
-
         if mode == MODE[_('PWM')]:
             min_value = 0.
             max_value = 1.
+            error = ERROR_VALUE_A
         elif mode == MODE[_('SERVO')]:
             min_value = 0
             max_value = 180
+            error = ERROR_VALUE_S
         else:
             raise logoerror(ERROR_PIN_CONFIGURED)
 
@@ -287,7 +282,7 @@ class Arduino(Plugin):
             except:
                 raise logoerror(ERROR)
         else:
-            raise logoerror(ERROR_VALUE_A)
+            raise logoerror(error)
 
     def _prim_digital_write(self, pin, value):
         self._check_init()
@@ -299,16 +294,13 @@ class Arduino(Plugin):
             value = int(value)
         except:
             raise logoerror(ERROR_VALUE_TYPE)
-
         try:
             a = self._arduinos[self.active_arduino]
             mode = a.digital[pin]._get_mode()
         except:
             raise logoerror(ERROR)
-
         if mode != MODE[_('OUTPUT')]:
             raise logoerror(ERROR_PIN_CONFIGURED)
-
         if (value < 0) or (value > 1):
             raise logoerror(ERROR_VALUE_D)
         else:
@@ -328,11 +320,11 @@ class Arduino(Plugin):
         try:
             a = self._arduinos[self.active_arduino]
             a.analog[pin].enable_reporting()
-            if a.analog[pin].read() is not None:
-                res = a.analog[pin].read()
+            a.pass_time(0.05) # wait for the iterator to start receiving data
+            res = a.analog[pin].read()
+            a.digital[pin].disable_reporting()
         except:
             pass
-
         return res
 
     def _prim_digital_read(self, pin):
@@ -341,25 +333,26 @@ class Arduino(Plugin):
             pin = int(pin)
         except:
             raise logoerror(ERROR_PIN_TYPE)
-
         try:
             a = self._arduinos[self.active_arduino]
             mode = a.digital[pin]._get_mode()
         except:
             raise logoerror(ERROR)
-
         if mode != MODE[_('INPUT')]:
             raise logoerror(ERROR_PIN_CONFIGURED)
-
         res = -1
         try:
             a = self._arduinos[self.active_arduino]
             a.digital[pin].enable_reporting()
-            if a.digital[pin].read() is not None:
-            	res = a.digital[pin].read()
+            a.pass_time(0.05) # wait for the iterator to start receiving data
+            if a.digital[pin].read() is None:
+                # if the library returns None it is actually False  not being updated
+                res = False
+            else:
+                res = a.digital[pin].read()
+            a.digital[pin].disable_reporting()
         except:
             pass
-
         return res
 
     def _prim_high(self):
@@ -373,9 +366,6 @@ class Arduino(Plugin):
 
     def _prim_output(self):
         return _('OUTPUT')
-
-    def _prim_analog(self):
-        return _('ANALOG')
 
     def _prim_pwm(self):
         return _('PWM')
@@ -459,7 +449,7 @@ class Arduino(Plugin):
                     self._arduinos_it.append(pyfirmata.util.Iterator(board))
                     self._arduinos_it[len(self._arduinos)-1].start()
                 except:
-                    debug_output(_('Error loading %s board') % n)
+                    raise logoerror(_('Error loading %s board') % n))
                     pass
 
         self.change_color_blocks()
