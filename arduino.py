@@ -52,6 +52,7 @@ COLOR_PRESENT = ["#00FFFF","#00A0A0"]
 class Arduino(Plugin):
 
     def __init__(self, parent):
+        Plugin.__init__(self)
         self.tw = parent
         self._baud = 57600
         self.active_arduino = 0
