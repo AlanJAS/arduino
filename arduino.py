@@ -229,9 +229,7 @@ class Arduino(Plugin):
 
     def _check_init(self):
         n = len(self._arduinos)
-        if (self.active_arduino < n) and (self.active_arduino >= 0):
-            a = self._arduinos[self.active_arduino]
-        else:
+        if (self.active_arduino > n) or (self.active_arduino < 0):
             raise logoerror(_('Not found Arduino %s') % (self.active_arduino + 1))
 
     def _prim_pin_mode(self, pin, mode):
@@ -256,7 +254,7 @@ class Arduino(Plugin):
         except:
             raise logoerror(ERROR_PIN_TYPE)
         try:
-            tmp = int(value)
+            tmp = float(value)
         except:
             raise logoerror(ERROR_VALUE_TYPE)
         try:
@@ -275,10 +273,10 @@ class Arduino(Plugin):
         else:
             raise logoerror(ERROR_PIN_CONFIGURED)
 
-        if not((value < min_value) or (value > max_value)):
+        if not((tmp < min_value) or (tmp > max_value)):
             try:
                 a = self._arduinos[self.active_arduino]
-                a.digital[pin].write(value)
+                a.digital[pin].write(tmp)
             except:
                 raise logoerror(ERROR)
         else:
