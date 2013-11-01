@@ -26,8 +26,11 @@ from TurtleArt.tapalette import make_palette
 from TurtleArt.tapalette import palette_name_to_index
 from TurtleArt.tapalette import palette_blocks
 from TurtleArt.tapalette import special_block_colors
-from TurtleArt.talogo import primitive_dictionary, logoerror
+from TurtleArt.talogo import logoerror
 from TurtleArt.tautils import debug_output
+from TurtleArt.taconstants import CONSTANTS
+from TurtleArt.taprimitive import Primitive, ArgSlot, ConstantArg
+from TurtleArt.tatype import TYPE_INT, TYPE_FLOAT, TYPE_STRING, TYPE_NUMBER
 
 sys.path.insert(0, os.path.abspath('./plugins/arduino'))
 import pyfirmata
@@ -65,35 +68,32 @@ class Arduino(Plugin):
         debug_output('creating %s palette' % _('arduino'), self.tw.running_sugar)
         palette = make_palette('arduino', COLOR_NOTPRESENT, _('Palette of Arduino blocks'))
 
-        primitive_dictionary['arduinorefresh'] = self._prim_arduinorefresh
         palette.add_block('arduinorefresh',
                      style='basic-style',
                      label=_('refresh Arduino'),
                      prim_name='arduinorefresh',
                      help_string=_('Search for connected Arduinos.'))
-        self.tw.lc.def_prim('arduinorefresh', 0, lambda self : primitive_dictionary['arduinorefresh']())
+        self.tw.lc.def_prim('arduinorefresh', 0,
+            Primitive(self.refresh))
         special_block_colors['arduinorefresh'] = COLOR_PRESENT[:]
 
-        primitive_dictionary['arduinoselect'] = self._prim_arduinoselect
         palette.add_block('arduinoselect',
                           style='basic-style-1arg',
                           default = 1,
                           label=_('Arduino'),
                           help_string=_('set current Arduino board'),
                           prim_name = 'arduinoselect')
-        self.tw.lc.def_prim('arduinoselect', 1, lambda self, n : primitive_dictionary['arduinoselect'](n))
+        self.tw.lc.def_prim('arduinoselect', 1,
+            Primitive(self.select, arg_descs=[ArgSlot(TYPE_NUMBER)]))
 
-        primitive_dictionary['arduinocount'] = self._prim_arduinocount
         palette.add_block('arduinocount',
                           style='box-style',
                           label=_('number of Arduinos'),
                           help_string=_('number of Arduino boards'),
                           prim_name = 'arduinocount')
         self.tw.lc.def_prim('arduinocount', 0,
-            lambda self:
-            primitive_dictionary['arduinocount']())
+            Primitive(self.count, TYPE_INT))
 
-        primitive_dictionary['arduinoname'] = self._prim_arduinoname
         palette.add_block('arduinoname',
                   style='number-style-1arg',
                   label=_('Arduino name'),
@@ -101,30 +101,26 @@ class Arduino(Plugin):
                   help_string=_('Get the name of an Arduino.'),
                   prim_name='arduinoname')
         self.tw.lc.def_prim('arduinoname', 1,
-            lambda self, x:
-            primitive_dictionary['arduinoname'](x))
-
-        primitive_dictionary['pinmode'] = self._prim_pin_mode
+            Primitive(self.getName, TYPE_STRING, [ArgSlot(TYPE_NUMBER)]))
+ 
         palette.add_block('pinmode',
                   style='basic-style-2arg',
                   label=[_('pin mode'),_('pin'),_('mode')],
                   default=[1],
                   help_string=_('Select the pin function (INPUT, OUTPUT, PWM, SERVO).'),
                   prim_name='pinmode')
-        self.tw.lc.def_prim('pinmode', 2, lambda self, x, y : primitive_dictionary['pinmode'](x, y))
+        self.tw.lc.def_prim('pinmode', 2,
+            Primitive(self.pinMode, arg_descs=[ArgSlot(TYPE_NUMBER), ArgSlot(TYPE_STRING)]))
 
-        primitive_dictionary['analogwrite'] = self._prim_analog_write
         palette.add_block('analogwrite',
                   style='basic-style-2arg',
                   label=[_('analog write'),_('pin'),_('value')],
-                  default=[0, 255],
+                  default=[0, 1],
                   help_string=_('Write analog value in specified port.'),
                   prim_name='analogwrite')
         self.tw.lc.def_prim('analogwrite', 2,
-            lambda self, x, y:
-            primitive_dictionary['analogwrite'](x, y))
+            Primitive(self.analogWrite, arg_descs=[ArgSlot(TYPE_NUMBER), ArgSlot(TYPE_NUMBER)]))
 
-        primitive_dictionary['analogread'] = self._prim_analog_read
         palette.add_block('analogread',
                   style='number-style-1arg',
                   label=[_('analog read')],
@@ -132,10 +128,8 @@ class Arduino(Plugin):
                   help_string=_('Read value from analog port. Value may be between 0 and 1.'),
                   prim_name='analogread')
         self.tw.lc.def_prim('analogread', 1,
-            lambda self, x:
-            primitive_dictionary['analogread'](x))
+            Primitive(self.analogRead, TYPE_FLOAT, arg_descs=[ArgSlot(TYPE_NUMBER)]))
 
-        primitive_dictionary['digitalwrite'] = self._prim_digital_write
         palette.add_block('digitalwrite',
                   style='basic-style-2arg',
                   label=[_('digital write'),_('pin'),_('value')],
@@ -143,10 +137,8 @@ class Arduino(Plugin):
                   help_string=_('Write digital value to specified port.'),
                   prim_name='digitalwrite')
         self.tw.lc.def_prim('digitalwrite', 2,
-            lambda self, x, y:
-            primitive_dictionary['digitalwrite'](x, y))
+            Primitive(self.digitalWrite, arg_descs=[ArgSlot(TYPE_NUMBER), ArgSlot(TYPE_NUMBER)]))
 
-        primitive_dictionary['digitalread'] = self._prim_digital_read
         palette.add_block('digitalread',
                   style='number-style-1arg',
                   label=[_('digital read')],
@@ -154,67 +146,64 @@ class Arduino(Plugin):
                   help_string=_('Read value from digital port.'),
                   prim_name='digitalread')
         self.tw.lc.def_prim('digitalread', 1,
-            lambda self, x:
-            primitive_dictionary['digitalread'](x))
+            Primitive(self.digitalRead, TYPE_INT, arg_descs=[ArgSlot(TYPE_NUMBER)]))
 
-        primitive_dictionary['high'] = self._prim_high
+        global CONSTANTS
+        CONSTANTS['HIGH'] = 1
         palette.add_block('high',
                   style='box-style',
                   label=_('HIGH'),
                   help_string=_('Set HIGH value for digital port.'),
                   prim_name='high')
         self.tw.lc.def_prim('high', 0,
-            lambda self: primitive_dictionary['high']())
+            Primitive(CONSTANTS.get, TYPE_INT, [ConstantArg('HIGH')]))
 
-        primitive_dictionary['input'] = self._prim_input
+        CONSTANTS['INPUT'] = _('INPUT')
         palette.add_block('input',
                   style='box-style',
                   label=_('INPUT'),
                   help_string=_('Configure Arduino port for digital input.'),
                   prim_name='input')
         self.tw.lc.def_prim('input', 0,
-            lambda self: primitive_dictionary['input']())
+            Primitive(CONSTANTS.get, TYPE_STRING, [ConstantArg('INPUT')]))
 
-        primitive_dictionary['servo'] = self._prim_servo
+        CONSTANTS['SERVO'] = _('SERVO')
         palette.add_block('servo',
                   style='box-style',
                   label=_('SERVO'),
                   help_string=_('Configure Arduino port to drive a servo.'),
                   prim_name='servo')
         self.tw.lc.def_prim('servo', 0,
-            lambda self: primitive_dictionary['servo']())
+            Primitive(CONSTANTS.get, TYPE_STRING, [ConstantArg('SERVO')]))
 
-        primitive_dictionary['low'] = self._prim_low
+        CONSTANTS['LOW'] = 0
         palette.add_block('low',
                   style='box-style',
                   label=_('LOW'),
                   help_string=_('Set LOW value for digital port.'),
                   prim_name='low')
         self.tw.lc.def_prim('low', 0,
-            lambda self: primitive_dictionary['low']())
+            Primitive(CONSTANTS.get, TYPE_INT, [ConstantArg('LOW')]))
 
-        primitive_dictionary['output'] = self._prim_output
+        CONSTANTS['OUTPUT'] = _('OUTPUT')
         palette.add_block('output',
                   style='box-style',
                   label=_('OUTPUT'),
                   help_string=_('Configure Arduino port for digital output.'),
                   prim_name='output')
         self.tw.lc.def_prim('output', 0,
-            lambda self: primitive_dictionary['output']())
+            Primitive(CONSTANTS.get, TYPE_STRING, [ConstantArg('OUTPUT')]))
 
-        primitive_dictionary['pwm'] = self._prim_pwm
+        CONSTANTS['PWM'] = _('PWM')
         palette.add_block('pwm',
                   style='box-style',
                   label=_('PWM'),
                   help_string=_('Configure Arduino port for PWM (pulse-width modulation).'),
                   prim_name='pwm')
         self.tw.lc.def_prim('pwm', 0,
-            lambda self: primitive_dictionary['pwm']())
+            Primitive(CONSTANTS.get, TYPE_STRING, [ConstantArg('PWM')]))
 
     ############################### Turtle signals ############################
-
-    def start(self):
-        pass
 
     def quit(self):
         for dev in self._arduinos:
@@ -223,9 +212,6 @@ class Arduino(Plugin):
             except:
                 pass
 
-    def stop(self):
-        pass
-
     ###########################################################################
 
     def _check_init(self):
@@ -233,7 +219,7 @@ class Arduino(Plugin):
         if (self.active_arduino > n) or (self.active_arduino < 0):
             raise logoerror(_('Not found Arduino %s') % (self.active_arduino + 1))
 
-    def _prim_pin_mode(self, pin, mode):
+    def pinMode(self, pin, mode):
         self._check_init()
         try:
             pin = int(pin)
@@ -248,7 +234,7 @@ class Arduino(Plugin):
         else:
             raise logoerror(ERROR_MODE)
 
-    def _prim_analog_write(self, pin, value):
+    def analogWrite(self, pin, value):
         self._check_init()
         try:
             pin = int(pin)
@@ -273,7 +259,6 @@ class Arduino(Plugin):
             error = ERROR_VALUE_S
         else:
             raise logoerror(ERROR_PIN_CONFIGURED)
-
         if not((tmp < min_value) or (tmp > max_value)):
             try:
                 a = self._arduinos[self.active_arduino]
@@ -283,7 +268,7 @@ class Arduino(Plugin):
         else:
             raise logoerror(error)
 
-    def _prim_digital_write(self, pin, value):
+    def digitalWrite(self, pin, value):
         self._check_init()
         try:
             pin = int(pin)
@@ -309,7 +294,7 @@ class Arduino(Plugin):
             except:
                 raise logoerror(ERROR)
 
-    def _prim_analog_read(self, pin):
+    def analogRead(self, pin):
         self._check_init()
         try:
             pin = int(pin)
@@ -326,7 +311,7 @@ class Arduino(Plugin):
             pass
         return res
 
-    def _prim_digital_read(self, pin):
+    def digitalRead(self, pin):
         self._check_init()
         try:
             pin = int(pin)
@@ -354,25 +339,7 @@ class Arduino(Plugin):
             pass
         return res
 
-    def _prim_high(self):
-        return 1
-
-    def _prim_low(self):
-        return 0
-
-    def _prim_input(self):
-        return _('INPUT')
-
-    def _prim_output(self):
-        return _('OUTPUT')
-
-    def _prim_pwm(self):
-        return _('PWM')
-
-    def _prim_servo(self):
-        return _('SERVO')
-
-    def _prim_arduinoselect(self, i):
+    def select(self, i):
         n = len(self._arduinos)
         try:
             i = int(i)
@@ -384,10 +351,10 @@ class Arduino(Plugin):
         else:
             raise logoerror(_('Not found Arduino %s') % (i + 1))
 
-    def _prim_arduinocount(self):
+    def count(self):
         return len(self._arduinos)
 
-    def _prim_arduinoname(self, i):
+    def getName(self, i):
         n = len(self._arduinos)
         try:
             i = int(i)
@@ -415,11 +382,9 @@ class Arduino(Plugin):
                         else:
                             special_block_colors[block.name] = COLOR_NOTPRESENT[:]
                         block.refresh()
-
             self.tw.regenerate_palette(index)
 
-    def _prim_arduinorefresh(self):
-
+    def refresh(self):
         #Close actual Arduinos
         for dev in self._arduinos:
             try:
@@ -429,7 +394,6 @@ class Arduino(Plugin):
         self._arduinos = []
         self._arduinos_dev = []
         self._arduinos_it = []
-
         #Search for new Arduinos
         status,output_usb = commands.getstatusoutput("ls /dev/ | grep ttyUSB")
         output_usb_parsed = output_usb.split('\n')
@@ -437,7 +401,6 @@ class Arduino(Plugin):
         output_acm_parsed = output_acm.split('\n')
         output = output_usb_parsed
         output.extend(output_acm_parsed)
-
         for dev in output:
             if not(dev == ''):
                 n = '/dev/%s' % dev
@@ -449,5 +412,5 @@ class Arduino(Plugin):
                     self._arduinos_it[len(self._arduinos)-1].start()
                 except:
                     raise logoerror(_('Error loading %s board') % n)
-
         self.change_color_blocks()
+
