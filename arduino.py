@@ -27,7 +27,6 @@ from TurtleArt.tapalette import palette_name_to_index
 from TurtleArt.tapalette import palette_blocks
 from TurtleArt.tapalette import special_block_colors
 from TurtleArt.talogo import logoerror
-from TurtleArt.tautils import debug_output
 from TurtleArt.taconstants import CONSTANTS
 from TurtleArt.taprimitive import Primitive, ArgSlot, ConstantArg
 from TurtleArt.tatype import TYPE_INT, TYPE_FLOAT, TYPE_STRING, TYPE_NUMBER
@@ -65,8 +64,10 @@ class Arduino(Plugin):
 
     def setup(self):
         """ Setup is called once, when the Turtle Window is created. """
-        debug_output('creating %s palette' % _('arduino'), self.tw.running_sugar)
-        palette = make_palette('arduino', COLOR_NOTPRESENT, _('Palette of Arduino blocks'))
+
+        palette = make_palette('arduino', COLOR_NOTPRESENT,
+                             _('Palette of Arduino blocks'),
+                             translation=_('arduino'))
 
         palette.add_block('arduinorefresh',
                      style='basic-style',
