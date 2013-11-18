@@ -59,7 +59,6 @@ class Arduino(Plugin):
         self._baud = 57600
         self.active_arduino = 0
         self._arduinos = []
-        self._arduinos_dev = []
         self._arduinos_it = []
 
     def setup(self):
@@ -363,7 +362,8 @@ class Arduino(Plugin):
             raise logoerror(_('The device must be an integer'))
         i = i - 1
         if (i < n) and (i >= 0):
-            return self._arduinos_dev[i]
+            a = self._arduinos[i]
+            return a.name
         else:
             raise logoerror(_('Not found Arduino %s') % (i + 1))
 
@@ -393,7 +393,6 @@ class Arduino(Plugin):
             except:
                 pass
         self._arduinos = []
-        self._arduinos_dev = []
         self._arduinos_it = []
         #Search for new Arduinos
         status,output_usb = commands.getstatusoutput("ls /dev/ | grep ttyUSB")
@@ -407,11 +406,12 @@ class Arduino(Plugin):
                 n = '/dev/%s' % dev
                 try:
                     board = pyfirmata.Arduino(n, baudrate=self._baud)
+                    it = pyfirmata.util.Iterator(board)
+                    it.start()
                     self._arduinos.append(board)
-                    self._arduinos_dev.append(n)
-                    self._arduinos_it.append(pyfirmata.util.Iterator(board))
-                    self._arduinos_it[len(self._arduinos)-1].start()
-                except:
+                    self._arduinos_it.append(it)
+                except Exception, err:
+                    print err
                     raise logoerror(_('Error loading %s board') % n)
         self.change_color_blocks()
 
