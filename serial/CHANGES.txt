@@ -476,3 +476,29 @@ Bugfixes (win32):
 - [Bug pyserial:152] Cannot configure port, some setting was wrong. Can leave
   port handle open but port not accessible
 
+
+Version 2.8      2014-xx-xx
+---------------------------
+- [FTR pyserial:37] Support fileno() function in the socket protocol
+- Posix: [Patch pyserial:31] Mark/space parity on Linux
+- Linux: [Patch pyserial:32] Module list_ports for linux should include the
+  product information as description.
+- Java: fix 2 bugs (stop bits if/else and non-integer timeouts) (Torsten
+  Roemer)
+- update wxSerialConfigDialog.py to use serial.tools.list_ports
+
+Bugfixes:
+
+- [Bug pyserial:157] Implement inWaiting in protocol_socket
+- [Bug pyserial:166] RFC2217 connections always fail
+
+Bugfixes (posix):
+
+- [Bug pyserial:156] PosixSerial.open raises OSError rather than
+  SerialException when port open fails
+- [Bug pyserial:163] serial.tools.list_ports.grep() fails if it encounters None type
+
+Bugfixes (cli):
+
+- [Bug pyserial:159] write() in serialcli.py not working with IronPython 2.7.4
+

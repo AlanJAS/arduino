@@ -8,8 +8,5 @@
 
 VERSION = '2.7'
 
-import sys
-import os
-
 from serial.serialposix import *
 

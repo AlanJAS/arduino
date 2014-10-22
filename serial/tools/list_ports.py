@@ -18,10 +18,6 @@ based on their descriptions or hardware ID.
 
 import sys, os, re
 
-# chose an implementation, depending on os
-#~ if sys.platform == 'cli':
-#~ else:
-import os
 from serial.tools.list_ports_posix import *
 
 

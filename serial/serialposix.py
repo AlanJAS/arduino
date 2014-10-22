@@ -26,6 +26,10 @@ if (sys.hexversion < 0x020200f0):
 else:
     FCNTL = fcntl
 
+# try to detect the OS so that a device can be selected...
+# this code block should supply a device() and set_special_baudrate() function
+# for the platform
+
 
 def device(port):
     return '/dev/ttyS%d' % port
@@ -122,15 +126,20 @@ TIOCM_DTR_str = struct.pack('I', TIOCM_DTR)
 TIOCSBRK  = hasattr(TERMIOS, 'TIOCSBRK') and TERMIOS.TIOCSBRK or 0x5427
 TIOCCBRK  = hasattr(TERMIOS, 'TIOCCBRK') and TERMIOS.TIOCCBRK or 0x5428
 
+CMSPAR = 010000000000 # Use "stick" (mark/space) parity
+
 
 class PosixSerial(SerialBase):
-    """Serial port class POSIX implementation. Serial port configuration is 
+    """\
+    Serial port class POSIX implementation. Serial port configuration is 
     done with termios and fcntl. Runs on Linux and many other Un*x like
-    systems."""
+    systems.
+    """
 
     def open(self):
-        """Open port with current settings. This may throw a SerialException
-           if the port cannot be opened."""
+        """\
+        Open port with current settings. This may throw a SerialException
+        if the port cannot be opened."""
         if self._port is None:
             raise SerialException("Port must be configured before it can be used.")
         if self._isOpen:
@@ -139,7 +148,7 @@ class PosixSerial(SerialBase):
         # open
         try:
             self.fd = os.open(self.portstr, os.O_RDWR|os.O_NOCTTY|os.O_NONBLOCK)
-        except IOError, msg:
+        except OSError, msg:
             self.fd = None
             raise SerialException(msg.errno, "could not open port %s: %s" % (self._port, msg))
         #~ fcntl.fcntl(self.fd, FCNTL.F_SETFL, 0)  # set blocking
@@ -220,7 +229,7 @@ class PosixSerial(SerialBase):
             cflag |= TERMIOS.CS5
         else:
             raise ValueError('Invalid char len: %r' % self._bytesize)
-        # setup stopbits
+        # setup stop bits
         if self._stopbits == STOPBITS_ONE:
             cflag &= ~(TERMIOS.CSTOPB)
         elif self._stopbits == STOPBITS_ONE_POINT_FIVE:
@@ -238,6 +247,11 @@ class PosixSerial(SerialBase):
             cflag |=  (TERMIOS.PARENB)
         elif self._parity == PARITY_ODD:
             cflag |=  (TERMIOS.PARENB|TERMIOS.PARODD)
+        elif self._parity == PARITY_MARK and plat[:5] == 'linux':
+            cflag |=  (TERMIOS.PARENB|CMSPAR|TERMIOS.PARODD)
+        elif self._parity == PARITY_SPACE and plat[:5] == 'linux':
+            cflag |=  (TERMIOS.PARENB|CMSPAR)
+            cflag &= ~(TERMIOS.PARODD)
         else:
             raise ValueError('Invalid parity: %r' % self._parity)
         # setup flow control
@@ -266,7 +280,7 @@ class PosixSerial(SerialBase):
         # XXX should there be a warning if setting up rtscts (and xonxoff etc) fails??
 
         # buffer
-        # vmin "minimal number of characters to be read. = for non blocking"
+        # vmin "minimal number of characters to be read. 0 for non blocking"
         if vmin < 0 or vmin > 255:
             raise ValueError('Invalid vmin: %r ' % vmin)
         cc[TERMIOS.VMIN] = vmin
@@ -303,9 +317,11 @@ class PosixSerial(SerialBase):
 
     # select based implementation, proved to work on many systems
     def read(self, size=1):
-        """Read size bytes from the serial port. If a timeout is set it may
-           return less characters as requested. With no timeout it will block
-           until the requested number of bytes is read."""
+        """\
+        Read size bytes from the serial port. If a timeout is set it may
+        return less characters as requested. With no timeout it will block
+        until the requested number of bytes is read.
+        """
         if not self._isOpen: raise portNotOpenError
         read = bytearray()
         while len(read) < size:
@@ -326,14 +342,16 @@ class PosixSerial(SerialBase):
                     # but reading returns nothing.
                     raise SerialException('device reports readiness to read but returned no data (device disconnected or multiple access on port?)')
                 read.extend(buf)
+            except OSError, e:
+                # this is for Python 3.x where select.error is a subclass of OSError
+                # ignore EAGAIN errors. all other errors are shown
+                if e.errno != errno.EAGAIN:
+                    raise SerialException('read failed: %s' % (e,))
             except select.error, e:
+                # this is for Python 2.x
                 # ignore EAGAIN errors. all other errors are shown
                 # see also http://www.python.org/dev/peps/pep-3151/#select
                 if e[0] != errno.EAGAIN:
-                    raise SerialException('read failed: %s' % (e,))
-            except OSError, e:
-                # ignore EAGAIN errors. all other errors are shown
-                if e.errno != errno.EAGAIN:
                     raise SerialException('read failed: %s' % (e,))
         return bytes(read)
 
@@ -371,8 +389,10 @@ class PosixSerial(SerialBase):
         return len(data)
 
     def flush(self):
-        """Flush of file like objects. In this case, wait until all data
-           is written."""
+        """\
+        Flush of file like objects. In this case, wait until all data
+        is written.
+        """
         self.drainOutput()
 
     def flushInput(self):
@@ -381,18 +401,25 @@ class PosixSerial(SerialBase):
         termios.tcflush(self.fd, TERMIOS.TCIFLUSH)
 
     def flushOutput(self):
-        """Clear output buffer, aborting the current output and
-        discarding all that is in the buffer."""
+        """\
+        Clear output buffer, aborting the current output and discarding all
+        that is in the buffer.
+        """
         if not self._isOpen: raise portNotOpenError
         termios.tcflush(self.fd, TERMIOS.TCOFLUSH)
 
     def sendBreak(self, duration=0.25):
-        """Send break condition. Timed, returns to idle state after given duration."""
+        """\
+        Send break condition. Timed, returns to idle state after given
+        duration.
+        """
         if not self._isOpen: raise portNotOpenError
         termios.tcsendbreak(self.fd, int(duration/0.25))
 
     def setBreak(self, level=1):
-        """Set break: Controls TXD. When active, no transmitting is possible."""
+        """\
+        Set break: Controls TXD. When active, no transmitting is possible.
+        """
         if self.fd is None: raise portNotOpenError
         if level:
             fcntl.ioctl(self.fd, TIOCSBRK)
@@ -490,9 +517,9 @@ class PosixSerial(SerialBase):
             termios.tcflow(self.fd, TERMIOS.TCOOFF)
 
 
-# assemble Serial class with the platform specifc implementation and the base
+# assemble Serial class with the platform specific implementation and the base
 # for file-like behavior. for Python 2.6 and newer, that provide the new I/O
-# library, derrive from io.RawIOBase
+# library, derive from io.RawIOBase
 try:
     import io
 except ImportError:
@@ -505,14 +532,18 @@ else:
         pass
 
 class PosixPollSerial(Serial):
-    """poll based read implementation. not all systems support poll properly.
-    however this one has better handling of errors, such as a device
-    disconnecting while it's in use (e.g. USB-serial unplugged)"""
+    """\
+    Poll based read implementation. Not all systems support poll properly.
+    However this one has better handling of errors, such as a device
+    disconnecting while it's in use (e.g. USB-serial unplugged).
+    """
 
     def read(self, size=1):
-        """Read size bytes from the serial port. If a timeout is set it may
-           return less characters as requested. With no timeout it will block
-           until the requested number of bytes is read."""
+        """\
+        Read size bytes from the serial port. If a timeout is set it may
+        return less characters as requested. With no timeout it will block
+        until the requested number of bytes is read.
+        """
         if self.fd is None: raise portNotOpenError
         read = bytearray()
         poll = select.poll()

@@ -40,7 +40,10 @@ else:
 plat = sys.platform.lower()
 
 def read_line(filename):
-    """help function to read a single line from a file. returns none"""
+    """\
+    Helper function to read a single line from a file.
+    Returns None on errors..
+    """
     try:
         f = open(filename)
         line = f.readline().strip()
@@ -110,6 +113,12 @@ def describe(device):
     sys_dev_path = '/sys/class/tty/%s/device/interface' % (base,)
     if os.path.exists(sys_dev_path):
         return read_line(sys_dev_path)
+    # USB Product Information
+    sys_dev_path = '/sys/class/tty/%s/device' % (base,)
+    if os.path.exists(sys_dev_path):
+        product_name_file = os.path.dirname(os.path.realpath(sys_dev_path)) + "/product"
+        if os.path.exists(product_name_file):
+            return read_line(product_name_file)
     return base
 
 def hwinfo(device):
