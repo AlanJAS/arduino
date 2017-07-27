@@ -228,7 +228,10 @@ class Arduino(Plugin):
         if (mode in MODE):
             try:
                 a = self._arduinos[self.active_arduino]
-                a.digital[pin]._set_mode(MODE[mode])
+                actual_mode = a.digital[pin]._get_mode()
+                new_mode = MODE[mode]
+                if actual_mode <> new_mode:
+                    a.digital[pin]._set_mode(new_mode)
             except:
                 raise logoerror(ERROR)
         else:
