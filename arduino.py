@@ -1,5 +1,7 @@
-#!/usr/bin/env python
-# Copyright (c) 2012, Alan Aguiar <alanjas@hotmail.com>
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2012-2020, Alan Aguiar <alanjas@hotmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +19,7 @@
 
 import os
 import sys
-import commands
+import subprocess
 
 from gettext import gettext as _
 from plugins.plugin import Plugin
@@ -230,7 +232,7 @@ class Arduino(Plugin):
                 a = self._arduinos[self.active_arduino]
                 actual_mode = a.digital[pin]._get_mode()
                 new_mode = MODE[mode]
-                if actual_mode <> new_mode:
+                if not(actual_mode == new_mode):
                     a.digital[pin]._set_mode(new_mode)
             except:
                 raise logoerror(ERROR)
@@ -398,10 +400,20 @@ class Arduino(Plugin):
         self._arduinos = []
         self._arduinos_it = []
         #Search for new Arduinos
-        status,output_usb = commands.getstatusoutput("ls /dev/ | grep ttyUSB")
-        output_usb_parsed = output_usb.split('\n')
-        status,output_acm = commands.getstatusoutput("ls /dev/ | grep ttyACM")
-        output_acm_parsed = output_acm.split('\n')
+        output_usb_parsed = []
+        output_acm_parsed = []
+        try:
+            output_usb = subprocess.check_output('ls /dev/ | grep ttyUSB', shell=True)
+            output_usb = output_usb.decode()
+            output_usb_parsed = output_usb.split('\n')
+        except:
+            pass
+        try:
+            output_acm = subprocess.check_output('ls /dev/ | grep ttyACM', shell=True)
+            output_acm = output_acm.decode()
+            output_acm_parsed = output_acm.split('\n')
+        except:
+            pass
         output = output_usb_parsed
         output.extend(output_acm_parsed)
         for dev in output:
@@ -413,8 +425,7 @@ class Arduino(Plugin):
                     it.start()
                     self._arduinos.append(board)
                     self._arduinos_it.append(it)
-                except Exception, err:
-                    print err
+                except:
                     raise logoerror(_('Error loading %s board') % n)
         self.change_color_blocks()
 
